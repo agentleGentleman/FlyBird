@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="./js/util.js"></script>
+    <script src="./js/getCanvasContext.js"></script>
+    <script src="./js/getImage.js"></script>
+    <script src="./js/bird.js"></script>
+    <script src="./js/sky.js"></script>
+    <script src="./js/land.js"></script>
+    <script src="./js/pipe.js"></script>
+    <script src="./js/text.js"></script>
+    <script src="./js/dateText.js"></script>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <script>
+        // 创建一个绘图环境
+        var ctx = getCanvasContext('canvas-container');
+
+        // 所有的图片加载完毕之后再渲染游戏画面
+        getImage({
+            bird: './imgs/bird.png',
+            land: './imgs/land.png',
+            pipeDown: './imgs/pipeDown.png',
+            pipeUp: './imgs/pipeUp.png',
+            sky: './imgs/sky.png'
+        }, function ( imgObj ) {
+            var isStop = false,
+                birdCoreX, birdCoreY;
+
+            // 根据游戏背景初始化画布大小
+            ctx.canvas.width = imgObj.sky.width;
+            ctx.canvas.height = imgObj.sky.height;
+
+            // 创建游戏所需的对象
+            var objs = [], i, bird;
+            objs.push(Sky({ ctx: ctx, img: imgObj.sky }));
+            objs.push(Sky({ ctx: ctx, img: imgObj.sky, x: imgObj.sky.width }));
+            for ( i = 0; i < 6; i++ ) {
+                objs.push(Pipe({ ctx: ctx, downImage: imgObj.pipeDown, upImage: imgObj.pipeUp,
+                    pipeSpace: 100, x: 300 + imgObj.pipeDown.width * 3 * i }));
+            }
+            for ( i = 0; i < 4; i++ ) {
+                objs.push(Land({ ctx: ctx, img: imgObj.land,
+                    x: imgObj.land.width * i, y: ctx.canvas.height - imgObj.land.height }));
+            }
+            bird = Bird({ ctx: ctx, img: imgObj.bird, widthMaxFrame: 3 });
+            objs.push(bird);
+            objs.push(DateText({ ctx: ctx, startTime: Date.now(),
+                x: ctx.canvas.width, y: 0,
+                align: 'right', baseline: 'top', fillStyle: 'deeppink'}));
+
+            // 渲染游戏画面
+            (function gameStart() {
+                birdCoreX = bird.x + bird.width / 2;
+                birdCoreY = bird.y + bird.height / 2;
+
+                // 检测小鸟是否飞出了画布，撞向了大地，撞向了管道
+                if ( birdCoreY < 0 || birdCoreY > ctx.canvas.height - imgObj.land.height ||
+                    ctx.isPointInPath( birdCoreX, birdCoreY )) {
+                    isStop = true;
+                }
+
+                // 把上一次绘制的6个管道路径清除
+                ctx.beginPath();
+                objs.forEach(function ( o ) {
+                    o.draw();
+                    o.update();
+                });
+                if ( !isStop ) {
+                    requestAnimationFrame(gameStart);
+                }
+            }());
+        });
+    </script>
+</body>
+</html>
